@@ -2,9 +2,9 @@
 /* In the Egg language, everything is a expression
     Expression have a type property.
     3 types of expression. their types are: value, word, apply.
-    {type:"value", value: xx}   for string and number literal.
-    {type: "word", name: xx}    for variables/identifiers
-    {type: "apply", operator: "xx", args:[E]}  for functions and operators. E means expression.
+    Ev: {type:"value", value: xx}   for string and number literal.
+    Ew: {type: "word", name: xx}    for variables/identifiers
+    Ea: {type: "apply", operator: Ew, args:[Ev/Ew]}  for functions and operators. E means expression.
  */
 
 
@@ -12,12 +12,13 @@
 
 
 /**
- * parses for string, number, and word.
+ * parses the whole program into a structure {expr: expression, rest: program}
+ * it can receive partial expression like  "x,10)"
  * @param program
  * @returns {{expr, rest}}
  */
 function parseExpression(program){
-    var program= skipSpace(program);
+    program= skipSpace(program);
     var match, expr;
     //
     if( match = /^"([^"]*)"/.exec(program) ){
@@ -35,6 +36,7 @@ function parseExpression(program){
 
 /**
  * removes leading space from input.
+ * this is same as string.trimStart()?
  * @param string
  * @returns {*}
  */
@@ -51,13 +53,13 @@ function skipSpace(string){
  * @returns {*}
  */
 function parseApply(expr, program){
-    program= skipSpace(program);
     if(program[0] !== "("){
         return {expr, rest: program};
     }
     program=  skipSpace(program.substring(1));
     expr= {type: "apply", operator:expr, args: []};
     while(program[0] != ")"){
+        //console.log(program)
         var arg= parseExpression(program);
         expr.args.push(arg.expr);
         program= skipSpace(arg.rest);
@@ -81,6 +83,77 @@ function parse(program){
     return result.expr;
 }
 
+
+/**
+ * parse the program Recursively.
+ * @param program
+ * @returns {*}
+ */
+function parseR(program)
+{
+    var match;
+    program= program.trim();
+    if( match= program.match(/^"(\s+)"&/)) return {type:"value",value: match[1]};
+    else if(match = program.match(/^"(\d+)"&/) ) return {type:"value",value: Number(match[1])};
+    else if(match = program.match( /^[^\(]+$/) ) return {type:"word", name: match[0]};
+    // add apply
+    else {
+        var result= {};
+        var [p1,p2]= getOuterParensis(program);
+        var word= program.substring(0,p1).trim();
+        result.type="apply";
+        result.operator= {type:"word", name:word};
+        result.args=[];
+        var args= split(program.substring(p1+1,p2));
+        for(var i in args)
+        {
+            result.args.push(parseR(args[i]));
+        }
+        return result;
+    }
+}
+
+/**
+ * get the out most ().
+ * @param input
+ * @returns {*[]}
+ */
+function getOuterParensis(input){
+    var p1= input.search(/\(/);
+    console.log(input)
+    if(p1 === -1) throw new SyntaxError("no () exist in apply construct")
+    var count=1;
+    var p2=p1;
+    while(p2 < input.length && count !== 0)
+    {
+        p2=p2+1;
+        if(input[p2]==="(" ) count++;
+        if(input[p2] === ")") count--;
+    }
+    if(p2=== input.length) throw new SyntaxError("no corresponding )");
+    return [p1,p2];
+}
+
+/**
+ * splits the parameters of a function/operator based on ","
+ * @param input
+ * @returns {Array}
+ */
+function split(input){
+    var result=[];
+    var status=0;
+    var pre=0;
+    for(var i in input)
+    {
+        if(input[i]==="(") status ++;
+        else if(input[i]=== ")") status --;
+        if(input[i]==="," && status ===0) {
+            result.push(input.substring(pre, i));
+            pre=i+1;
+        }
+    }
+    return result;
+}
 
 
 
@@ -113,6 +186,6 @@ var p1= "+(a,10)";
 var p2= "define(x,10)"
 var p3= "do(define(x,10),if(>(x,5)),print(\"larger\"), print(\"small\"))"
 var p4= "\"xxxx\"";
-console.log(parseExpression(p4));
+console.log(parseR(p2));
 
 
