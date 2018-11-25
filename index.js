@@ -91,10 +91,12 @@ function parse(program){
  */
 function parseR(program)
 {
+
     var match;
     program= program.trim();
-    if( match= program.match(/^"(\s+)"&/)) return {type:"value",value: match[1]};
-    else if(match = program.match(/^"(\d+)"&/) ) return {type:"value",value: Number(match[1])};
+    if(program === "") throw new SyntaxError("nothing in program");
+    if( match= program.match(/^"(\w*)"$/)) return {type:"value",value: match[1]};
+    else if(match = program.match(/^(\d+)$/) ) return {type:"value",value: Number(match[1])};
     else if(match = program.match( /^[^\(]+$/) ) return {type:"word", name: match[0]};
     // add apply
     else {
@@ -120,7 +122,6 @@ function parseR(program)
  */
 function getOuterParensis(input){
     var p1= input.search(/\(/);
-    console.log(input)
     if(p1 === -1) throw new SyntaxError("no () exist in apply construct")
     var count=1;
     var p2=p1;
@@ -149,7 +150,10 @@ function split(input){
         else if(input[i]=== ")") status --;
         if(input[i]==="," && status ===0) {
             result.push(input.substring(pre, i));
-            pre=i+1;
+            pre=Number(i)+1;
+        }
+        if(i == input.length-1) {
+            result.push(input.substring(pre));
         }
     }
     return result;
@@ -162,13 +166,14 @@ function evaluate(expr, env){
         case "value":
             return expr. value;
         case "word":
-            if(expr.name in env)
+            if(expr.name in env){
                 return env[expr.name];
+            }
             else
                 throw new ReferenceError("undefined variable: "+ expr.name);
         case "apply":
             if(expr.operator.type === "word" && expr.operator.name in specialForms)
-                return specialForms[expr.operator.name](expr.args.env);
+                return specialForms[expr.operator.name](expr.args,env);
             var op= evaluate(expr.operator, env);
             if(typeof op !== "function")
                 throw new TypeError("applying a non function");
@@ -178,14 +183,69 @@ function evaluate(expr, env){
 
 var specialForms= Object.create(null);
 
+specialForms["if"]= function(args,env){
+    if(args.length !== 3) throw new SyntaxError("Bad number of arguments to if");
+    if(evaluate(args[0],env) === true) return evaluate(args[1],env);
+    else return evaluate(args[2], env);
+}
 
+specialForms["while"]= function(args,env){
+    if(args.length !== 2){
+        throw new Error("bad number of arguments to while");
+    }
+    while(evaluate(args[0],env) !== false)
+    {
+        evaluate(args[1],env);
+    }
+    return false;
+}
+
+specialForms["define"] = function(args,env) {
+    if(args.length !== 2){
+        throw new Error("bad number of arguments to define");
+    }
+    var value= evaluate(args[1],env);
+    env[args[0].name]= value;
+    return value;
+}
+
+specialForms["do"] = function(args,env) {
+    var result=0;
+    for(var i in args)
+    {
+        result= evaluate(args[i], env);
+    }
+    return result;
+}
+
+
+var topEnv= Object.create(null);
+topEnv["true"] = true;
+topEnv["false"]= false;
+["+","-","*","/","==","<",">"].forEach(op=> {
+    topEnv[op] = new Function("a,b", "return a "+ op+ " b;");
+});
+topEnv["print"]= function(value){
+    console.log(value);
+    return value;
+}
+
+function run(program)
+{
+    var env= Object.create(topEnv);
+    return evaluate(parseR(program), env);
+}
 
 
 // " must be excaped in string.
-var p1= "+(a,10)";
+var p1= "+(10,10)";
 var p2= "define(x,10)"
-var p3= "do(define(x,10),if(>(x,5)),print(\"larger\"), print(\"small\"))"
-var p4= "\"xxxx\"";
-console.log(parseR(p2));
+var p3= "do(define(x,10),if(>(x,5),print(\"larger\"), print(\"small\")))"
+var p4= "\"10\"";
+var p5="print(\"test\")"
+var p6= "if(>(10,5),print(\"larger\"), print(\"small\"))"
 
+//var p5= "x"
+//console.log(parseR(p6));
+run(p3)
 
