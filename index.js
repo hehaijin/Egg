@@ -1,7 +1,18 @@
 'use strict'
+/* In the Egg language, everything is a expression
+    Expression have a type property.
+    3 types of expression. their types are: value, word, apply.
+    {type:"value", value: xx}   for string and number literal.
+    {type: "word", name: xx}    for variables/identifiers
+    {type: "apply", operator: "xx", args:[E]}  for functions and operators. E means expression.
+ */
+
+
+
+
 
 /**
- *
+ * parses for string, number, and word.
  * @param program
  * @returns {{expr, rest}}
  */
@@ -97,9 +108,11 @@ var specialForms= Object.create(null);
 
 
 
-
+// " must be excaped in string.
 var p1= "+(a,10)";
 var p2= "define(x,10)"
-console.log(parseExpression(p2));
+var p3= "do(define(x,10),if(>(x,5)),print(\"larger\"), print(\"small\"))"
+var p4= "\"xxxx\"";
+console.log(parseExpression(p4));
 
 
