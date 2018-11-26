@@ -1,7 +1,9 @@
 'use strict'
 const parse = require('../parser.js');
 const expect = require('chai').expect;
-describe('parse', ()=> {
+const fs= require('fs');
+
+describe('when use string as input, parser', ()=> {
     it('should be a function', ()=>{
         expect(parse).to.be.a('function');
     });
@@ -39,5 +41,31 @@ describe('parse', ()=> {
         expect(result.args[1].value).to.equal(10);
     } );
     
+
+});
+
+
+describe('when input from file, parser ', ()=>{
+
+    it('should correctly parse string input', (done)=> { 
+        fs.readFile('./test/t1.egg', (err, data) => {
+            const input= new String(data);
+            const result= parse(input);
+            expect(result.type).to.equal('value');
+            expect(result.value).to.equal('test');
+            done();
+        });
+    } );
+
+    it('should correctly parse number', (done)=> { 
+        fs.readFile('./test/t2.egg', (err, data) => {
+            const input= new String(data);
+            const result= parse(input);
+            expect(result.type).to.equal('value');
+            expect(result.value).to.equal(12345);
+            done();
+        });
+    } );
+
 
 });
